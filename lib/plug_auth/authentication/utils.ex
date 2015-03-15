@@ -1,6 +1,10 @@
 defmodule PlugAuth.Authentication.Utils do
   import Plug.Conn
 
+  @param_key "param_key"
+  
+  def param_key, do: @param_key
+
   def assign_user_data(conn, user_data), do: assign(conn, :authenticated_user, user_data)
   def get_authenticated_user(conn), do: conn.assigns[:authenticated_user]
   def halt_with_error(conn, msg \\ "unauthorized") do
