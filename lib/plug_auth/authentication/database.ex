@@ -8,7 +8,7 @@ defmodule PlugAuth.Authentication.Database do
   """ 
 
   require Logger
-  @session_key "database_auth"
+  @session_key Application.get_env(:plug_auth, :database_session_key, "database_auth")
 
   @behaviour Plug
   import Plug.Conn

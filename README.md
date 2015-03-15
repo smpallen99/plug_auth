@@ -27,7 +27,7 @@ After you are done, run `mix deps.get` in your shell to fetch the dependencies.
 
 ## Authentication
 
-Currently two authentication methods are supported: HTTP Basic and Token-based. In both cases you will first have to add valid credentials in the credential store. Multiple credentials can be added. The plugs provide convenience methods for this task.
+Currently three authentication methods are supported: HTTP Basic, Token-based, and Database-based. In either case you will first have to add valid credentials in the credential store. Multiple credentials can be added. The plugs provide convenience methods for this task.
 
 ### HTTP Basic Example
 ```elixir
@@ -40,7 +40,14 @@ token = PlugAuth.Authentication.Token.generate_token
 PlugAuth.Authentication.Token.add_credentials(token, %{role: :admin})
 ```
 
-The last argument in both cases can be any term, except nil. On succesful authentication it will be stored by the authentication plug in the assign map of the connection with the :authenticated_user atom as key. You can retrieve it using 
+### Database Example
+```elixir
+id = params["id"]
+user = Repo.one(from u in User, where: u.id == ^id, preload: [:roles]
+PlugAuth.Authentication.Database.create_login(conn, user)
+```
+
+The last argument in both cases can be any term, except nil. On successful authentication it will be stored by the authentication plug in the assign map of the connection with the :authenticated_user atom as key. You can retrieve it using 
 
 ```elixir
 PlugAuth.Authentication.Utils.get_authenticated_user(conn)
@@ -61,6 +68,31 @@ The realm parameter is optional and can be omitted. By default "Restricted Area"
 plug PlugAuth.Authentication.Token, source: :params, param: "auth_token", error: ~s'{"error":"authentication required"}'
 ```
 The error parameter is optional and is treated as in the example above. The source parameter defines how to retrieve the token from the connection. Currently, the three acceptable values are: :params, :header and :session. Their name is self-explainatory. The param parameter defines the name of the parameter/HTTP header/session key where the token is stored. This should cover most cases, but if retrieving the token is more complex than that, you can pass a tuple for the source parameter. The tuple must be in the form `{MyModule, :my_function, ["param1", 42]}`. The function must accept a connection as its first argument (which will be injected as the head of the given parameter list) and any other number of parameters, which must be given in the third element of the tuple. If no additional arguments are needed, an empty list must be given.
+
+### Database Example
+```elixir
+plug PlugAuth.Authentication.Database, login: &Auth.SessionController.login_callback/1
+```
+
+where login_callback will render the login page. In phoenix, this would look like:
+
+```elixir
+def login_callback(conn) do
+  conn
+  |> put_layout({Auth.LayoutView, "auth.html"})
+  |> put_view(Auth.SessionView)
+  |> render("new.html")
+  |> halt
+end 
+```
+
+### Combining Token and Database Authentication together
+```elixir
+plug PlugAuth.Authentication.Token, source: :params_session, param: "auth_token", error: nil
+plug PlugAuth.Authentication.Database, login: &Auth.SessionController.login_callback/1
+```
+
+Note: setting error: nil on PlugAuth.Authentication.Token skips the error association, allowing it to fall through to the Database authentication.
 
 ## Access control
 PlugAuth currently provides role-based access control, which can be performed after authentication. You would use it like this

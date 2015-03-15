@@ -1,8 +1,8 @@
 defmodule PlugAuth.Authentication.Utils do
   import Plug.Conn
 
-  @param_key "param_key"
-  
+  @param_key Application.get_env :plug_auth, :token_param_key, "param_key"
+
   def param_key, do: @param_key
 
   def assign_user_data(conn, user_data), do: assign(conn, :authenticated_user, user_data)
