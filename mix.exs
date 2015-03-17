@@ -4,7 +4,7 @@ defmodule PlugAuth.Mixfile do
   def project do
     [
       app: :plug_auth,
-      version: "0.0.3",
+      version: "0.0.4",
       elixir: "~> 1.0",
       deps: deps,
       package: package,
@@ -35,7 +35,7 @@ defmodule PlugAuth.Mixfile do
 
   defp package do
     [
-      contributors: ["Michele Balistreri"],
+      contributors: ["Michele Balistreri", "Stephen Pallen"],
       licenses: ["ISC"],
       links: %{"GitHub" => "https://github.com/briksoftware/plug_auth"}
     ]

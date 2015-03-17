@@ -16,6 +16,10 @@ defmodule PlugAuth.Authentication.Token do
 
       plug PlugAuth.Authentication.Token, source: { module, function, ["my_param"]} end
 
+    or
+
+      plug PlugAuth.Authentication.Token, source: :params_session, param: "auth_token"
+
     to your pipeline.
   """ 
 
@@ -58,21 +62,22 @@ defmodule PlugAuth.Authentication.Token do
   defp convert_source(:session, param), do: {__MODULE__, :get_token_from_session, [param]}
   defp convert_source(source = {module, fun, args}, _param) when is_atom(module) and is_atom(fun) and is_list(args), do: source
 
+  def get_token_from_params(conn, param), do: {conn, conn.params[param]}
+  def get_token_from_header(conn, param), do: {conn, get_first_req_header(conn, param)}
+  def get_token_from_session(conn, param), do: {conn, get_session(conn, param)}
+
   def get_token_from_params_session(conn, param) do 
-    get_token_from_session(conn, param)
-    |> check_token_from_params(param)
+    get_token_from_params(conn, param)
+    |> check_token_from_session(param)
     |> save_token_in_session(param)
   end
+  def check_token_from_session({conn, nil}, param), do: get_token_from_session(conn, param)
+  def check_token_from_session({conn, creds}, _param), do: {conn, creds}
+
   def save_token_in_session({conn, nil}, _), do: {conn, nil}
   def save_token_in_session({conn, creds}, param) do 
     {put_session(conn, param, creds) |> put_session(param_key, param), creds}
   end
-  def check_token_from_params({conn, nil}, param), do: get_token_from_params(conn, param)
-  def check_token_from_params({conn, creds}, _param), do: {conn, creds}
-
-  def get_token_from_params(conn, param), do: {conn, conn.params[param]}
-  def get_token_from_header(conn, param), do: {conn, get_first_req_header(conn, param)}
-  def get_token_from_session(conn, param), do: {conn, get_session(conn, param)}
 
   def call(conn, opts) do
     unless get_authenticated_user(conn) do

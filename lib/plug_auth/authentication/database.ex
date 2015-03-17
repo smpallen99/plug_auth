@@ -1,13 +1,12 @@
 defmodule PlugAuth.Authentication.Database do
   @moduledoc """
-    Implements basic HTTP authentication. To use add:
+    Implements Database authentication. To use add:
 
-      plug PlugAuth.Authentication.Basic, realm: "Secret world"
+      plug PlugAuth.Authentication.Database, login: &MyController.login_callback/1
 
     to your pipeline. This module is derived from https://github.com/lexmag/blaguth
   """ 
 
-  require Logger
   @session_key Application.get_env(:plug_auth, :database_session_key, "database_auth")
 
   @behaviour Plug
@@ -15,7 +14,7 @@ defmodule PlugAuth.Authentication.Database do
   import PlugAuth.Authentication.Utils
 
   @doc """
-    Add the credentials for a `user` and `password` combination. `user_data` can be any term but must not be `nil`.
+    Create a login for a user. `user_data` can be any term but must not be `nil`.
   """
   def create_login(conn, user_data) do
     id = UUID.uuid1
@@ -24,7 +23,7 @@ defmodule PlugAuth.Authentication.Database do
   end
 
   @doc """
-    Remove the credentials for a `user` and `password` combination.
+    Delete a login.
   """
   def delete_login(conn) do
     case get_session(conn, @session_key) do
@@ -37,13 +36,9 @@ defmodule PlugAuth.Authentication.Database do
     |> delete_token_session 
   end
 
-  defp delete_token_session(conn) do
-    case get_session(conn, param_key) do
-      nil -> conn
-      param -> put_session(conn, param, nil)
-    end
-  end
-
+  @doc """
+    Fetch user data from the credential store
+  """
   def get_user_data(conn) do
     get_session(conn, @session_key)
     |> PlugAuth.CredentialStore.get_user_data
@@ -55,12 +50,10 @@ defmodule PlugAuth.Authentication.Database do
     unless login do
       raise RuntimeError, message: "PlugAuth.Database requires a login redirect callback"
     end
-    # Logger.warn "#{__MODULE__} init #{inspect opts}"
     %{login: login,  error: error}
   end
 
   def call(conn, opts) do
-    # Logger.warn "#{__MODULE__} call #{inspect opts}"
     unless get_authenticated_user(conn) do
       conn
       |> get_session_data
@@ -71,24 +64,14 @@ defmodule PlugAuth.Authentication.Database do
     end
   end
 
-  def get_session_data(conn) do
+  defp get_session_data(conn) do
     {conn, get_session(conn, @session_key) }
   end
 
-  def verify_auth_key({conn, nil}) do
-    # Logger.warn "#{__MODULE__} verify nil auth key"
-    {conn, nil}
-  end
-  def verify_auth_key({conn, auth_key}) do
-    # Logger.warn "#{__MODULE__} verify found auth key"
-    {conn, PlugAuth.CredentialStore.get_user_data(auth_key)}
-  end
+  defp verify_auth_key({conn, nil}), do: {conn, nil}
+  defp verify_auth_key({conn, auth_key}), do: {conn, PlugAuth.CredentialStore.get_user_data(auth_key)}
 
-  def assert_login({conn, nil}, login) do
-    # Logger.warn "#{__MODULE__} assert needs login" # conn: #{inspect conn}"
-    login.(conn)
-  end
-
-  def assert_login({conn, user_data}, login), do: assign_user_data(conn, user_data)
+  defp assert_login({conn, nil}, login), do: login.(conn)
+  defp assert_login({conn, user_data}, login), do: assign_user_data(conn, user_data)
 
 end

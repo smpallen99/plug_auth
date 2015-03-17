@@ -25,17 +25,14 @@ defmodule PlugAuth.Access.Role do
     |> assert_role(opts[:roles], opts[:error])
   end
 
-  # defp get_user(conn), do: {conn, PlugAuth.Authentication.Utils.get_authenticated_user(conn)}
   defp get_user(conn) do 
     user_data = PlugAuth.Authentication.Utils.get_authenticated_user(conn)
-    Logger.warn "#{__MODULE__} get_user - user_data: #{inspect user_data}"
     {conn, user_data}
   end
   defp get_role({conn, nil}), do: {conn, nil}
   defp get_role({conn, user}), do: {conn, PlugAuth.Access.RoleAdapter.get_role(user)}
 
   defp assert_role({conn, role}, roles, error) when is_list(role) do
-    Logger.warn "#{__MODULE__} assert role list role: #{inspect role}, roles: #{inspect roles}"
     case Enum.filter(role, &(&1 in roles)) do
       [] -> 
         halt_forbidden(conn, error)
@@ -43,7 +40,7 @@ defmodule PlugAuth.Access.Role do
         assign(conn, :authenticated_role, found)
     end
   end
-  
+
   defp assert_role({conn, role}, roles, error) do
     if role in roles do
       assign(conn, :authenticated_role, role)
