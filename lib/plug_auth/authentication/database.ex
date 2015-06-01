@@ -32,6 +32,7 @@ defmodule PlugAuth.Authentication.Database do
       key -> 
         PlugAuth.CredentialStore.delete_credentials(key)
         put_session(conn, @session_key, nil)
+        |> put_session("user_return_to", nil)
     end
     |> delete_token_session 
   end
@@ -71,7 +72,9 @@ defmodule PlugAuth.Authentication.Database do
   defp verify_auth_key({conn, nil}), do: {conn, nil}
   defp verify_auth_key({conn, auth_key}), do: {conn, PlugAuth.CredentialStore.get_user_data(auth_key)}
 
-  defp assert_login({conn, nil}, login), do: login.(conn)
-  defp assert_login({conn, user_data}, login), do: assign_user_data(conn, user_data)
-
+  defp assert_login({conn, nil}, login) do
+    put_session(conn, "user_return_to", Path.join(["/" | conn.path_info]))
+    |> login.()
+  end
+  defp assert_login({conn, user_data}, _login), do: assign_user_data(conn, user_data)
 end
