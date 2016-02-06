@@ -2,6 +2,9 @@ defmodule PlugAuth.CredentialStore do
   @doc """
   Starts a new credentials store.
   """
+  require Logger
+  alias PlugAuth.DbStore
+
   def start_link do
     Agent.start_link(&HashDict.new/0, name: __MODULE__)
   end
@@ -9,15 +12,24 @@ defmodule PlugAuth.CredentialStore do
   @doc """
   Gets the user data for the given credentials
   """
-  def get_user_data(credentials) do
-    Agent.get(__MODULE__, &HashDict.get(&1, credentials))
+  def get_user_data(credentials, db_model, id_key) do
+    case get_data credentials do
+      nil -> 
+        if db_model, do: DbStore.get_user_data(db_model.__struct__, credentials, id_key), 
+          else: nil
+      other -> 
+        other
+    end
   end
+
+  defp get_data(credentials), do: Agent.get(__MODULE__, &HashDict.get(&1, credentials))
 
   @doc """
   Puts the `user_data` for the given `credentials`.
   """
-  def put_credentials(credentials, user_data) do
+  def put_credentials(credentials, user_data, id_key) do
     Agent.update(__MODULE__, &HashDict.put(&1, credentials, user_data))
+    DbStore.put_credentials(user_data, credentials, id_key) 
   end  
 
   @doc """
@@ -26,6 +38,11 @@ defmodule PlugAuth.CredentialStore do
   Returns the current value of `credentials`, if `credentials` exists.
   """
   def delete_credentials(credentials) do
-    Agent.get_and_update(__MODULE__, &HashDict.pop(&1, credentials))
+    case get_data credentials do
+      nil -> nil
+      user_data -> 
+        DbStore.delete_credentials user_data, credentials
+        Agent.get_and_update(__MODULE__, &HashDict.pop(&1, credentials))
+    end
   end
 end
