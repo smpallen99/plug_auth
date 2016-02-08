@@ -12,11 +12,18 @@ defmodule PlugAuth.CredentialStore do
   @doc """
   Gets the user data for the given credentials
   """
+  def get_user_data(credentials, nil, _) do
+    get_data credentials
+  end
   def get_user_data(credentials, db_model, id_key) do
     case get_data credentials do
-      nil -> 
-        if db_model, do: DbStore.get_user_data(db_model.__struct__, credentials, id_key), 
-          else: nil
+      nil ->
+        case DbStore.get_user_data(db_model.__struct__, credentials, id_key) do
+          nil -> nil
+          user_data ->
+            Agent.update(__MODULE__, &HashDict.put(&1, credentials, user_data))
+            user_data
+        end
       other -> 
         other
     end
