@@ -1,5 +1,6 @@
 defmodule PlugAuth.Authentication.Utils do
   import Plug.Conn
+  import Kernel, except: [to_string: 1]
 
   @param_key Application.get_env :plug_auth, :token_param_key, "param_key"
 
@@ -25,4 +26,5 @@ defmodule PlugAuth.Authentication.Utils do
   defp header_hd([]), do: nil
   defp header_hd([head | _]), do: head
 
+  def to_string({a,b,c,d}), do: "#{a}.#{b}.#{c}.#{d}"
 end
